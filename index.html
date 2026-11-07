@@ -110,6 +110,8 @@ video{width:100%;border-radius:12px;background:#000}
 
 <script>
 'use strict';
+// In the Android app, Capacitor provides the HealthWeight plugin. On the web this is null.
+const Native = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins.HealthWeight : null;
 // ---------- storage ----------
 const KEY = 'steady.v1';
 const DEFAULTS = {
@@ -130,7 +132,9 @@ const DEFAULTS = {
   dismissed: {},              // suggestion key -> date
   events: [],                 // [{date, type, text}]
   food: {},                   // 'YYYY-MM-DD' -> [{id, name, kcal, protein, color, meal, grams}]
-  foods: []                   // saved "usual foods"
+  foods: [],                  // saved "usual foods"
+  scale: {},                  // 'YYYY-MM-DD' -> lb, read from Health Connect (Android app only)
+  hc: {enabled: false, last: null}
 };
 function load(){
   try{
@@ -157,14 +161,17 @@ const nice = s => parse(s).toLocaleDateString(undefined,{weekday:'short', month:
 const MODES = {normal:'Normal', lean:'Lean', crisis:'Crisis'};
 const MULT = {normal:1, lean:1.5, crisis:2};
 const sortedDates = () => Object.keys(S.entries).sort();
+// A typed weight in a check-in wins; otherwise use the scale reading for that day.
+const weightOn = d => S.entries[d]?.weight ?? S.scale[d] ?? null;
+const weightDates = () => [...new Set([...Object.keys(S.entries), ...Object.keys(S.scale)])].filter(d => weightOn(d)).sort();
 
 function avg7(date, minN=1){
   let sum=0, n=0;
-  for(let i=0;i<7;i++){ const e = S.entries[addDays(date,-i)]; if(e && e.weight){ sum+=e.weight; n++; } }
+  for(let i=0;i<7;i++){ const w = weightOn(addDays(date,-i)); if(w){ sum+=w; n++; } }
   return n>=minN ? sum/n : null;
 }
 function latestWeightDate(){
-  const ds_ = sortedDates().filter(d => S.entries[d].weight);
+  const ds_ = weightDates();
   return ds_.length ? ds_[ds_.length-1] : null;
 }
 function entryPoints(e){
@@ -319,7 +326,7 @@ function render(){
 function renderToday(){
   const existing = S.entries[editDate];
   if(!draft || draft._date !== editDate){
-    draft = existing ? {...existing} : {mode: S.mode, weight:null, sleep:null, stress:null, protein:false, steps:false, workout:false, focus:'', note:''};
+    draft = existing ? {...existing} : {mode: S.mode, weight: S.scale[editDate] ?? null, sleep:null, stress:null, protein:false, steps:false, workout:false, focus:'', note:''};
     draft._date = editDate;
     const ft = foodTotals(editDate);
     if(!existing && ft.protein >= S.settings.proteinTarget) draft.protein = true;
@@ -333,7 +340,7 @@ function renderToday(){
   html += `<div class="datenav"><button id="prevDay">←</button><b>${editDate===t?'Today':nice(editDate)}</b><button id="nextDay" ${editDate>=t?'disabled':''}>→</button></div>`;
   html += `<div class="card">
     <div class="row between"><h2 style="margin:0">Check-in</h2><span class="mode ${m}">${MODES[m]}</span></div>
-    <label class="f">Weight (lb)</label>
+    <label class="f">Weight (lb)${draft.weight != null && draft.weight === S.scale[editDate] ? ' · ⚖️ from your scale' : ''}</label>
     <input id="weight" class="big" type="number" inputmode="decimal" step="0.1" placeholder="—" value="${draft.weight ?? ''}">`;
   if(m === 'normal'){
     html += `<label class="f">Sleep</label>
@@ -419,7 +426,7 @@ function saveEntry(){
 
 function renderTrend(){
   const t = today(); const st = S.settings;
-  const dates = sortedDates().filter(d => S.entries[d].weight);
+  const dates = weightDates();
   let html = `<div class="card"><div class="row between"><h2 style="margin:0">Weight</h2>
     <div class="seg" id="rangeSeg" style="width:180px">${[[30,'30d'],[90,'90d'],[0,'All']].map(([v,l])=>`<button class="${trendRange===v?'on':''}" data-r="${v}">${l}</button>`).join('')}</div></div>`;
   if(dates.length < 2){
@@ -429,7 +436,7 @@ function renderTrend(){
   const start = trendRange ? addDays(t, -trendRange+1) : dates[0];
   const days = []; for(let d = start; d <= t; d = addDays(d,1)) days.push(d);
   const lastW = dates[dates.length-1];
-  const pts = days.map((d,i) => ({i, w: S.entries[d]?.weight ?? null, a: d <= lastW ? avg7(d, 1) : null}));
+  const pts = days.map((d,i) => ({i, w: weightOn(d), a: d <= lastW ? avg7(d, 1) : null}));
   const tw = tripwire();
   const vals = pts.flatMap(p => [p.w, p.a]).filter(v => v != null);
   if(st.goalLow && st.goalHigh && st.phase==='maintain'){ vals.push(+st.goalLow, +st.goalHigh); }
@@ -464,7 +471,7 @@ function renderTrend(){
   for(const d of recentDays(14, t)){
     const e = S.entries[d];
     html += `<div class="row between small" style="padding:6px 0;border-bottom:1px solid var(--line)"><span>${nice(d)}</span>
-      <span>${e ? `${e.weight ?? '—'} · ${e.protein?'🍗':'·'}${e.steps?'👟':'·'}${e.workout?'🏋️':'·'} <span class="mode ${e.mode}">${MODES[e.mode][0]}</span>` : `<span class="muted">${d===t?'not yet':'missed'}</span>`}</span></div>`;
+      <span>${e ? `${weightOn(d) ?? '—'} · ${e.protein?'🍗':'·'}${e.steps?'👟':'·'}${e.workout?'🏋️':'·'} <span class="mode ${e.mode}">${MODES[e.mode][0]}</span>` : `<span class="muted">${d===t?'not yet':'missed'}</span>`}</span></div>`;
   }
   html += `</div>`;
   view.innerHTML = html; wireRange();
@@ -477,7 +484,7 @@ function renderGame(){
   const dates = sortedDates();
   const week = recentDays(7, t).filter(d => S.entries[d]).length;
   const rough = dates.filter(d => S.entries[d].mode !== 'normal').length;
-  const wdates = dates.filter(d => S.entries[d].weight);
+  const wdates = weightDates();
   let lost = 0;
   if(wdates.length >= 2){ const f = avg7(addDays(wdates[0],6)); const c = avg7(wdates[wdates.length-1]); if(f!=null && c!=null) lost = f - c; }
   const st = S.settings;
@@ -520,6 +527,7 @@ function renderPlan(){
   <div class="card"><h2>Accountability partner</h2>
     <p class="small muted" style="margin:0">Optional. After 3 missed days, the app offers to text them (you still hit send).</p>
     ${f('partnerName','Name','text')}${f('partnerPhone','Phone','tel')}</div>
+  ${Native ? scaleCardHtml() : ''}
   <button class="primary" id="savePlan">Save plan</button>
   <div class="card" style="margin-top:12px"><h2>Your data</h2>
     <p class="small muted" style="margin:0 0 8px">Everything is stored only on this phone. Export a backup now and then.</p>
@@ -536,7 +544,16 @@ function renderPlan(){
     save(); toast('Plan saved'); render();
   };
   wireCalc();
-  document.getElementById('exportBtn').onclick = () => {
+  if(Native) wireScale();
+  document.getElementById('exportBtn').onclick = async () => {
+    if(Native){   // Android app: write a file, then open the share sheet (Drive, Files, email…)
+      try{
+        const {Filesystem, Share} = window.Capacitor.Plugins;
+        const r = await Filesystem.writeFile({path: `steady-backup-${today()}.json`, data: JSON.stringify(S, null, 2), directory: 'CACHE', encoding: 'utf8'});
+        await Share.share({title: 'Steady backup', files: [r.uri]});
+      }catch(e){ if(!/cancel/i.test(e.message||'')) toast('Export failed: ' + (e.message || e)); }
+      return;
+    }
     const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `steady-backup-${today()}.json`; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
@@ -834,11 +851,60 @@ function wireCalc(){
   };
 }
 
+
+// ---------- scale sync (Android app only, via Health Connect) ----------
+function scaleCardHtml(){
+  const h = S.hc;
+  return `<div class="card" id="scaleCard"><h2>Smart scale</h2>
+    <p class="small muted" style="margin:0 0 8px">Reads weigh-ins from Health Connect. Make sure your scale's app is set to share weight with Health Connect. Steady uses your first weigh-in of each day; a weight you type yourself always wins.</p>
+    ${h.enabled ? `<p class="small" style="margin:0 0 8px">✅ Connected${h.last ? ` · last synced ${new Date(h.last).toLocaleString()}` : ''}</p>
+      <div class="row"><button id="hcSync">Sync now</button><button id="hcOff">Turn off</button></div>`
+      : `<button id="hcOn" style="width:100%">Connect to Health Connect</button>`}
+    <p class="small muted" id="hcMsg"></p></div>`;
+}
+function wireScale(){
+  const $ = id => document.getElementById(id), msg = t => { const m = $('hcMsg'); if(m) m.textContent = t; };
+  if($('hcOn')) $('hcOn').onclick = async () => {
+    try{
+      const {status} = await Native.availability();
+      if(status !== 'available'){ msg(status === 'update_required' ? 'Health Connect needs an update from the Play Store.' : 'Health Connect is not available on this phone.'); return; }
+      const {granted} = await Native.requestPermission();
+      if(!granted){ msg('Permission not granted. You can allow it in Health Connect settings.'); return; }
+      S.hc.enabled = true; save(); await syncScale(true); renderPlan();
+    }catch(e){ msg('Could not connect: ' + (e.message || e)); }
+  };
+  if($('hcSync')) $('hcSync').onclick = async () => { await syncScale(true); renderPlan(); };
+  if($('hcOff')) $('hcOff').onclick = () => { S.hc.enabled = false; save(); renderPlan(); };
+}
+let syncing = false;
+async function syncScale(interactive){
+  if(!Native || !S.hc.enabled || syncing) return;
+  syncing = true;
+  try{
+    const {records} = await Native.readWeights({since: Date.now() - 30*864e5});
+    const first = {};   // earliest reading per local day
+    for(const r of records){ const d = ds(new Date(r.time)); if(!first[d] || r.time < first[d].time) first[d] = r; }
+    let n = 0;
+    for(const [d, r] of Object.entries(first)){
+      const lb = Math.round(r.kg * 2.20462 * 10) / 10;
+      if(S.scale[d] !== lb){ S.scale[d] = lb; n++; }
+    }
+    S.hc.last = Date.now(); save();
+    if(n){
+      if(draft && !S.entries[draft._date] && draft.weight == null) draft.weight = S.scale[draft._date] ?? null;
+      if(!document.getElementById('sheetBg') && tab !== 'plan') render();
+    }
+    if(interactive) toast(n ? `Synced ${n} weigh-in${n > 1 ? 's' : ''} from your scale` : 'Up to date — no new weigh-ins');
+  }catch(e){ if(interactive) toast('Scale sync failed: ' + (e.message || e)); }
+  finally{ syncing = false; }
+}
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; if(tab==='today' || tab==='food') editDate = today(); draft = null; render(); });
 // If the app stays open past midnight, jump to the new day when reopened.
 document.addEventListener('visibilitychange', () => { if(!document.hidden && tab==='today' && !draft?.weight && editDate < today()){ editDate = today(); draft = null; render(); } });
 render();
-if('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+if(!Native && 'serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+syncScale(false);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) syncScale(false); });
 </script>
 </body>
 </html>
