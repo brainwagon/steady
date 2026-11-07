@@ -81,7 +81,7 @@ button.link{background:none;border:none;color:var(--teal);padding:6px 0;min-heig
 
 .muted{color:var(--muted)}
 .small{font-size:15px}
-.stat{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em;line-height:1.15}
+.stat{font-size:28px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid2 .card{margin:0;background:transparent;border-radius:0;border-top:2px solid var(--line);padding:10px 2px 4px}
 .bar{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
@@ -93,7 +93,7 @@ button.link{background:none;border:none;color:var(--teal);padding:6px 0;min-heig
 
 /* the level: the one bold element */
 .level{margin:2px 0 18px}
-.level .num{font-size:52px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.level .num{font-size:52px;font-weight:800;letter-spacing:-.03em;line-height:1}
 .level .num small{font-size:20px;font-weight:600;letter-spacing:0;color:var(--muted);margin-left:4px}
 .level .cap{margin:4px 0 14px;color:var(--muted);font-size:15px}
 .vial{position:relative;height:44px;border-radius:999px;background:linear-gradient(180deg,var(--fluid) 0%,var(--fluid-deep) 100%);box-shadow:inset 0 2px 0 rgba(255,255,255,.45),inset 0 -3px 6px rgba(0,0,0,.12);border:2px solid var(--ink)}
@@ -140,6 +140,35 @@ svg text{fill:var(--muted);font-size:10px;font-family:"Atkinson Next",sans-serif
 .seg.color button.on.y{background:var(--yellow-soft);border-color:var(--yellow)}
 .seg.color button.on.r{background:var(--red-soft);border-color:var(--red)}
 video{width:100%;border-radius:var(--r-md);background:#000}
+
+/* trend chart (validated: series #008573 light / #26A391 dark; dots 3.7:1 / 4.7:1) */
+:root{--series:#008573;--ctx:#73857F}
+@media (prefers-color-scheme: dark){:root{--series:#26A391;--ctx:#7B8F8A}}
+.stat small.unit{font-size:15px;font-weight:600;color:var(--muted);margin-left:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.chartwrap{position:relative;touch-action:pan-y;border-radius:var(--r-sm)}
+.chartwrap svg{display:block;overflow:visible}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .tick{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+svg .zl{fill:var(--muted);font-size:11px;font-weight:700;paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round}
+svg .wdot{fill:var(--ctx);stroke:var(--card);stroke-width:2}
+svg .avg{fill:none;stroke:var(--series);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+svg .enddot{fill:var(--series);stroke:var(--card);stroke-width:2}
+svg .endlbl{fill:var(--ink);font-size:13px;font-weight:800;paint-order:stroke;stroke:var(--card);stroke-width:4px;stroke-linejoin:round}
+svg .xh{stroke:var(--ink);stroke-width:1;opacity:.5}
+.legend{display:flex;gap:16px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.tip{position:absolute;top:6px;background:var(--surface);border-radius:var(--r-sm);padding:8px 10px;box-shadow:0 2px 10px rgba(0,0,0,.18);pointer-events:none;font-size:14px;white-space:nowrap;z-index:2}
+.tip-d{font-weight:700;margin-bottom:4px}
+.tip-r{display:flex;align-items:center;gap:6px}
+.tip .key{display:inline-block;width:12px}
+.tip .key.k-avg{height:2px;background:var(--series)}
+.tip .key.k-dot{height:8px;width:8px;border-radius:50%;background:var(--ctx);margin:0 2px}
+.dtable{width:100%;border-collapse:collapse;font-size:15px}
+.dtable th{text-align:left;font-weight:600;color:var(--muted);font-size:13px;padding:6px 4px;border-bottom:1px solid var(--line)}
+.dtable td{padding:9px 4px;border-bottom:1px solid var(--line)}
+.dtable .num{text-align:right;font-variant-numeric:tabular-nums}
+.tiles .stat{font-variant-numeric:normal}
 </style>
 </head>
 <body>
@@ -501,60 +530,156 @@ function saveEntry(){
   toast(msg); draft = null; renderToday();
 }
 
+let tableAll = false;
 function renderTrend(){
-  const t = today(); const st = S.settings;
+  const t = today(), st = S.settings;
   const dates = weightDates();
-  let html = `<div class="card"><div class="row between"><h2 style="margin:0">Weight</h2>
-    <div class="seg" id="rangeSeg" style="width:180px">${[[30,'30d'],[90,'90d'],[0,'All']].map(([v,l])=>`<button class="${trendRange===v?'on':''}" data-r="${v}">${l}</button>`).join('')}</div></div>`;
+  const rangeRow = `<div class="seg" id="rangeSeg" role="group" aria-label="Date range" style="margin:0 0 14px">${[[30,'30 days'],[90,'90 days'],[0,'All']].map(([v,l])=>`<button class="${trendRange===v?'on':''}" data-r="${v}" aria-pressed="${trendRange===v}">${l}</button>`).join('')}</div>`;
   if(dates.length < 2){
-    html += `<p class="muted">Log a few weigh-ins and your trend will show up here. The 7-day average line matters more than any single day.</p></div>`;
-    view.innerHTML = html; wireRange(); return;
+    view.innerHTML = `<div class="level empty">Your trend appears after a few weigh-ins. The 7-day average line is the one to watch; single days bounce around.</div>`;
+    return;
   }
-  const start = trendRange ? addDays(t, -trendRange+1) : dates[0];
-  const days = []; for(let d = start; d <= t; d = addDays(d,1)) days.push(d);
-  const lastW = dates[dates.length-1];
-  const pts = days.map((d,i) => ({i, w: weightOn(d), a: d <= lastW ? avg7(d, 1) : null}));
-  const tw = tripwire();
-  const vals = pts.flatMap(p => [p.w, p.a]).filter(v => v != null);
-  if(st.goalLow && st.goalHigh && st.phase==='maintain'){ vals.push(+st.goalLow, +st.goalHigh); }
-  if(tw && tw.level !== 'green') vals.push(tw.yellowAt);
-  if(!vals.length){ html += `<p class="muted">No weigh-ins in this range.</p></div>`; view.innerHTML = html; wireRange(); return; }
-  let lo = Math.floor(Math.min(...vals) - 1), hi = Math.ceil(Math.max(...vals) + 1);
-  const W = 340, H = 200, L = 34, R = 8, T = 10, B = 22;
-  const x = i => L + (days.length === 1 ? 0 : i * (W-L-R) / (days.length-1));
-  const y = v => T + (hi - v) * (H-T-B) / (hi - lo);
-  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Weight trend">`;
-  for(let k=0;k<=4;k++){ const v = lo + (hi-lo)*k/4; svg += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end">${v.toFixed(0)}</text>`; }
-  if(st.phase==='maintain' && st.goalLow && st.goalHigh)
-    svg += `<rect x="${L}" width="${W-L-R}" y="${y(+st.goalHigh)}" height="${y(+st.goalLow)-y(+st.goalHigh)}" fill="var(--green)" opacity=".15"/>`;
-  if(tw) svg += `<line x1="${L}" x2="${W-R}" y1="${y(tw.yellowAt)}" y2="${y(tw.yellowAt)}" stroke="var(--yellow)" stroke-dasharray="4 3"/>`;
-  for(const p of pts) if(p.w != null) svg += `<circle cx="${x(p.i)}" cy="${y(p.w)}" r="2.5" fill="var(--muted)" opacity=".6"/>`;
-  const line = pts.filter(p => p.a != null).map(p => `${x(p.i).toFixed(1)},${y(p.a).toFixed(1)}`).join(' ');
-  svg += `<polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>`;
-  svg += `<text x="${L}" y="${H-6}">${nice(days[0])}</text><text x="${W-R}" y="${H-6}" text-anchor="end">${nice(days[days.length-1])}</text></svg>`;
-  html += svg + `<p class="small muted" style="margin:6px 0 0">Dots = daily weigh-ins · line = 7-day average${tw?' · dashed = yellow tripwire':''}${st.phase==='maintain'&&st.goalLow?' · band = goal range':''}</p></div>`;
+  const tw = tripwire(), maint = st.phase === 'maintain' && st.goalLow && st.goalHigh;
 
+  // ---- headline stats (not range-scoped) ----
   const lw = dates[dates.length-1];
   const cur = avg7(lw), wkAgo = avg7(addDays(lw,-7)), first = avg7(addDays(dates[0],6));
-  html += `<div class="grid2">
-    <div class="card"><div class="small muted">7-day average</div><div class="stat">${cur.toFixed(1)}</div></div>
-    <div class="card"><div class="small muted">vs last week</div><div class="stat">${wkAgo!=null?fmtDelta(cur-wkAgo):'—'}</div></div>
-    <div class="card"><div class="small muted">Since start</div><div class="stat">${first!=null?fmtDelta(cur-first):'—'}</div></div>
-    <div class="card"><div class="small muted">Tripwire</div><div class="stat" style="color:var(--${tw?tw.level:'muted'})">${tw?{green:'🟢 OK',yellow:'🟡 Watch',red:'🔴 Act'}[tw.level]:'—'}</div>${tw?`<div class="small muted">yellow at ${tw.yellowAt.toFixed(1)}</div>`:''}</div>
+  const delta = (v, label) => {
+    if(v == null) return `<div class="stat">—</div>`;
+    const good = !maint && v < -0.05;
+    const arrow = v < -0.05 ? '↓' : v > 0.05 ? '↑' : '';
+    return `<div class="stat" ${good?'style="color:var(--green)"':''}><span aria-hidden="true">${arrow}</span>${Math.abs(v).toFixed(1)}<small class="unit">lb</small></div><span class="sr">${v<0?'down':'up'} ${Math.abs(v).toFixed(1)} pounds ${label}</span>`;
+  };
+  const twWord = tw ? {green:'Steady', yellow:'Watch', red:'Act'}[tw.level] : '—';
+  let html = `<div class="grid2 tiles">
+    <div class="card"><div class="small muted">7-day average</div><div class="stat">${cur.toFixed(1)}<small class="unit">lb</small></div></div>
+    <div class="card"><div class="small muted">Change vs last week</div>${delta(wkAgo != null ? cur - wkAgo : null, 'versus last week')}</div>
+    <div class="card"><div class="small muted">Change since start</div>${delta(first != null ? cur - first : null, 'since start')}</div>
+    <div class="card"><div class="small muted">Tripwire</div><div class="stat">${tw ? `<span class="dot ${tw.level}" style="width:14px;height:14px;vertical-align:middle;margin-right:8px"></span>` : ''}${twWord}</div>${tw ? `<div class="small muted">Watch line at ${tw.yellowAt.toFixed(1)}</div>` : ''}</div>
   </div>`;
 
-  // last 14 days log
-  html += `<section class="sect"><h2>Last 14 days</h2>`;
-  for(const d of recentDays(14, t)){
-    const e = S.entries[d];
-    html += `<div class="row between small" style="padding:6px 0;border-bottom:1px solid var(--line)"><span>${nice(d)}</span>
-      <span>${e ? `${weightOn(d) ?? '—'} · ${e.protein?'🍗':'·'}${e.steps?'👟':'·'}${e.workout?'🏋️':'·'} <span class="mode ${e.mode}">${MODES[e.mode][0]}</span>` : `<span class="muted">${d===t?'not yet':'missed'}</span>`}</span></div>`;
+  // ---- range filter scopes the chart and the table below it ----
+  html += rangeRow;
+  const start = trendRange ? addDays(t, -trendRange+1) : dates[0];
+  const days = []; for(let d = start; d <= t; d = addDays(d,1)) days.push(d);
+  const pts = days.map((d,i) => ({i, d, w: weightOn(d), a: d <= lw ? avg7(d, 1) : null}));
+  const vals = pts.flatMap(p => [p.w, p.a]).filter(v => v != null);
+  if(!vals.length){
+    view.innerHTML = html + `<p class="muted">No weigh-ins in this range. Pick a longer range above.</p>`;
+    wireRange(); return;
   }
-  html += `</section>`;
-  view.innerHTML = html; wireRange();
+  let vmin = Math.min(...vals), vmax = Math.max(...vals);
+  if(maint){ vmin = Math.min(vmin, +st.goalLow); vmax = Math.max(vmax, +st.goalHigh); }
+  // show the watch zone if it's within reach of the data
+  const showZones = tw && tw.yellowAt <= vmax + 4;
+  if(showZones) vmax = Math.max(vmax, tw.yellowAt + 0.5);
+  // clean ticks
+  const span = Math.max(2, vmax - vmin);
+  const step = [0.5,1,2,5,10,20,50].find(s => span / s <= 5);
+  const lo = Math.floor((vmin - step*0.3) / step) * step, hi = Math.ceil((vmax + step*0.3) / step) * step;
+
+  const W = 360, H = 230, L = 38, R = 14, T = 12, B = 28;
+  const n = days.length;
+  const x = i => L + (n === 1 ? (W-L-R)/2 : i * (W-L-R) / (n-1));
+  const y = v => T + (hi - v) * (H-T-B) / (hi - lo);
+  const clampY = v => Math.max(T, Math.min(H-B, y(v)));
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" aria-hidden="true">`;
+  // zones (status washes, labeled)
+  if(maint){
+    const y1 = clampY(+st.goalHigh), y2 = clampY(+st.goalLow);
+    svg += `<rect x="${L}" y="${y1}" width="${W-L-R}" height="${y2-y1}" fill="var(--green-soft)"/><text class="zl" x="${W-R-4}" y="${y2-5}" text-anchor="end">goal range</text>`;
+  }
+  if(showZones){
+    const yY = clampY(tw.yellowAt), yR = clampY(tw.redAt);
+    if(yR > T) svg += `<rect x="${L}" y="${T}" width="${W-L-R}" height="${yR-T}" fill="var(--red-soft)"/>`;
+    svg += `<rect x="${L}" y="${yR}" width="${W-L-R}" height="${yY-yR}" fill="var(--yellow-soft)"/>`;
+    svg += `<text class="zl" x="${W-R-4}" y="${yY-5}" text-anchor="end">watch</text>`;
+    if(yR - T > 14) svg += `<text class="zl" x="${W-R-4}" y="${yR-5}" text-anchor="end">act</text>`;
+  }
+  // grid + y ticks
+  for(let v = lo; v <= hi + 1e-9; v += step)
+    svg += `<line class="grid" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L-6}" y="${y(v)+3.5}" text-anchor="end">${+v.toFixed(1)}</text>`;
+  // x ticks: start, middle, end
+  const short = d => parse(d).toLocaleDateString(undefined, {month:'short', day:'numeric'});
+  const xt = n > 2 ? [0, Math.round((n-1)/2), n-1] : [0, n-1];
+  xt.forEach((i, k) => svg += `<text class="tick" x="${x(i)}" y="${H-8}" text-anchor="${k===0?'start':k===xt.length-1?'end':'middle'}">${short(days[i])}</text>`);
+  // daily weigh-ins (context)
+  for(const p of pts) if(p.w != null) svg += `<circle class="wdot" cx="${x(p.i).toFixed(1)}" cy="${y(p.w).toFixed(1)}" r="3.5"/>`;
+  // 7-day average line, broken where there's no data
+  let path = '', pen = false;
+  for(const p of pts){
+    if(p.a == null){ pen = false; continue; }
+    path += `${pen ? 'L' : 'M'}${x(p.i).toFixed(1)},${y(p.a).toFixed(1)}`; pen = true;
+  }
+  svg += `<path class="avg" d="${path}"/>`;
+  // endpoint: dot + direct label
+  const endP = [...pts].reverse().find(p => p.a != null);
+  if(endP){
+    const ex = x(endP.i), ey = y(endP.a);
+    svg += `<circle class="enddot" cx="${ex}" cy="${ey}" r="4.5"/>`;
+    const below = ey - T < 22;
+    svg += `<text class="endlbl" x="${Math.min(ex, W-R)}" y="${below ? ey + 20 : ey - 10}" text-anchor="end">${endP.a.toFixed(1)}</text>`;
+  }
+  // crosshair (hidden until used)
+  svg += `<line id="xh" class="xh" x1="0" x2="0" y1="${T}" y2="${H-B}" visibility="hidden"/><circle id="xhd" class="enddot" r="4.5" visibility="hidden"/></svg>`;
+
+  html += `<div class="card"><h2 style="margin:0">Weight</h2>
+    <div class="legend small muted" style="margin:4px 0 8px">
+      <span><svg width="18" height="10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" class="avg"/></svg>7-day average</span>
+      <span><svg width="10" height="10" aria-hidden="true"><circle cx="5" cy="5" r="3.5" class="wdot"/></svg>Daily weigh-in</span>
+    </div>
+    <div class="chartwrap" id="chart" tabindex="0" role="img" aria-label="Weight chart, ${short(days[0])} to ${short(days[n-1])}. 7-day average now ${cur.toFixed(1)} pounds. Use left and right arrow keys to read each day. The table below lists every value.">${svg}<div class="tip" id="tip" hidden></div></div>
+  </div>`;
+
+  // ---- table view (same range) ----
+  const rows = [...days].reverse();
+  const shown = tableAll ? rows : rows.slice(0, 14);
+  html += `<section class="sect"><h2>Day by day</h2>
+    <table class="dtable"><thead><tr><th scope="col">Date</th><th scope="col" class="num">Weigh-in</th><th scope="col" class="num">7-day avg</th><th scope="col">Habits</th></tr></thead><tbody>
+    ${shown.map(d => { const e = S.entries[d], w = weightOn(d), a = d <= lw ? avg7(d,1) : null;
+      return `<tr><td>${nice(d)}</td><td class="num">${w != null ? w.toFixed(1) : '<span class="muted">—</span>'}</td><td class="num">${a != null ? a.toFixed(1) : '<span class="muted">—</span>'}</td>
+        <td>${e ? `<span title="protein">${e.protein?'🍗':''}</span><span title="steps">${e.steps?'👟':''}</span><span title="workout">${e.workout?'🏋️':''}</span>${e.mode!=='normal'?` <span class="mode ${e.mode}" style="font-size:12px;padding:2px 8px">${MODES[e.mode]}</span>`:''}` : `<span class="muted">${d===t?'not yet':'no check-in'}</span>`}</td></tr>`; }).join('')}
+    </tbody></table>
+    ${rows.length > 14 ? `<button class="link" id="tblMore">${tableAll ? 'Show last 14 days' : `Show all ${rows.length} days`}</button>` : ''}</section>`;
+  view.innerHTML = html;
+  wireRange();
+  const more = document.getElementById('tblMore'); if(more) more.onclick = () => { tableAll = !tableAll; renderTrend(); };
+
+  // ---- crosshair + tooltip (touch drag, mouse, keyboard) ----
+  const wrap = document.getElementById('chart'), svgEl = wrap.querySelector('svg'), tip = document.getElementById('tip');
+  const xh = document.getElementById('xh'), xhd = document.getElementById('xhd');
+  let cur_i = null;
+  const show = i => {
+    cur_i = Math.max(0, Math.min(n-1, i)); const p = pts[cur_i];
+    const px = x(cur_i);
+    xh.setAttribute('x1', px); xh.setAttribute('x2', px); xh.setAttribute('visibility', 'visible');
+    if(p.a != null){ xhd.setAttribute('cx', px); xhd.setAttribute('cy', y(p.a)); xhd.setAttribute('visibility', 'visible'); } else xhd.setAttribute('visibility', 'hidden');
+    tip.replaceChildren();
+    const h = document.createElement('div'); h.className = 'tip-d'; h.textContent = nice(p.d); tip.append(h);
+    const row = (val, label, cls) => { const r = document.createElement('div'); r.className = 'tip-r';
+      const k = document.createElement('span'); k.className = 'key ' + cls; const v = document.createElement('b'); v.textContent = val;
+      const l = document.createElement('span'); l.className = 'muted'; l.textContent = label; r.append(k, v, l); tip.append(r); };
+    row(p.a != null ? p.a.toFixed(1) + ' lb' : '—', '7-day average', 'k-avg');
+    row(p.w != null ? p.w.toFixed(1) + ' lb' : 'none', 'weigh-in', 'k-dot');
+    tip.hidden = false;
+    const scale = svgEl.getBoundingClientRect().width / W, tw_ = tip.offsetWidth;
+    let left = px * scale + 12; if(left + tw_ > wrap.clientWidth) left = px * scale - tw_ - 12;
+    tip.style.left = Math.max(0, left) + 'px';
+  };
+  const hide = () => { xh.setAttribute('visibility','hidden'); xhd.setAttribute('visibility','hidden'); tip.hidden = true; };
+  const idxAt = ev => { const r = svgEl.getBoundingClientRect(); const vx = (ev.clientX - r.left) * W / r.width; return Math.round((vx - L) / ((W-L-R) / Math.max(1, n-1))); };
+  svgEl.addEventListener('pointerdown', ev => show(idxAt(ev)));
+  svgEl.addEventListener('pointermove', ev => show(idxAt(ev)));
+  svgEl.addEventListener('pointerleave', hide);
+  wrap.addEventListener('keydown', ev => {
+    if(ev.key === 'ArrowLeft' || ev.key === 'ArrowRight'){ ev.preventDefault(); show((cur_i ?? n-1) + (ev.key === 'ArrowLeft' ? -1 : 1)); }
+    if(ev.key === 'Escape') hide();
+  });
+  wrap.addEventListener('focus', () => show(cur_i ?? n-1));
+  wrap.addEventListener('blur', hide);
 }
+function wireRange(){ view.querySelectorAll('#rangeSeg button').forEach(b => b.onclick = () => { trendRange = +b.dataset.r; tableAll = false; renderTrend(); }); }
 function fmtDelta(v){ return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1); }
-function wireRange(){ view.querySelectorAll('#rangeSeg button').forEach(b => b.onclick = () => { trendRange = +b.dataset.r; renderTrend(); }); }
 
 function renderGame(){
   const tt = totals(), sk = streakInfo(), t = today();
