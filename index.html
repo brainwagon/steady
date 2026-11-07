@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Steady</title>
+<meta name="theme-color" content="#2f6f5e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f6f5f1; --card:#ffffff; --ink:#1f2421; --muted:#6b726e; --line:#e3e1da;
+  --accent:#2f6f5e; --accent-ink:#ffffff; --soft:#e4efe9;
+  --green:#2f8f5b; --yellow:#c08a12; --red:#c2453a;
+  --green-soft:#e2f3e8; --yellow-soft:#fbf1d9; --red-soft:#fbe4e1;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141816; --card:#1d2220; --ink:#e9ece9; --muted:#9aa39e; --line:#2e3532;
+    --accent:#5fb39a; --accent-ink:#0e1513; --soft:#22322c;
+    --green:#5cc189; --yellow:#e2b44a; --red:#e8776c;
+    --green-soft:#1f3328; --yellow-soft:#3a3120; --red-soft:#3d2422;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+header h1{font-size:20px;margin:0}
+main{max-width:560px;margin:0 auto;padding:12px 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:0 0 12px}
+.card h2{font-size:15px;margin:0 0 10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+label.f{display:block;font-size:14px;color:var(--muted);margin:10px 0 4px}
+input[type=number],input[type=text],input[type=tel],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+textarea{min-height:70px;resize:vertical}
+.big{font-size:28px;font-weight:700;text-align:center}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 12px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600;width:100%;padding:14px}
+button.link{background:none;border:none;color:var(--accent);padding:6px 0;text-decoration:underline}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:10px 4px}
+.seg button.on{background:var(--soft);border-color:var(--accent);font-weight:700}
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--line);border-radius:10px;margin:6px 0;background:var(--bg)}
+.toggle.on{background:var(--green-soft);border-color:var(--green)}
+.toggle .box{width:26px;height:26px;border-radius:7px;border:2px solid var(--muted);display:grid;place-items:center;font-weight:700}
+.toggle.on .box{background:var(--green);border-color:var(--green);color:#fff}
+.mode{font-size:13px;font-weight:700;padding:4px 10px;border-radius:999px}
+.mode.normal{background:var(--green-soft);color:var(--green)}
+.mode.lean{background:var(--yellow-soft);color:var(--yellow)}
+.mode.crisis{background:var(--red-soft);color:var(--red)}
+.banner{border-radius:12px;padding:12px;margin:0 0 12px;border:1px solid}
+.banner.info{background:var(--soft);border-color:var(--accent)}
+.banner.yellow{background:var(--yellow-soft);border-color:var(--yellow)}
+.banner.red{background:var(--red-soft);border-color:var(--red)}
+.banner .row{margin-top:8px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.stat{font-size:26px;font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{height:10px;background:var(--line);border-radius:999px;overflow:hidden}
+.bar>div{height:100%;background:var(--accent)}
+.badge{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.badge:last-child{border-bottom:none}
+.badge .e{font-size:24px;width:32px;text-align:center}
+.badge.locked{opacity:.4}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav button{flex:1;border:none;border-radius:0;background:none;padding:10px 0 12px;font-size:12px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button span{font-size:20px}
+nav button.on{color:var(--accent);font-weight:700}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none;z-index:10;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+svg text{fill:var(--muted);font-size:10px}
+.datenav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.datenav button{padding:6px 12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Steady</h1>
+  <span id="modePill" class="mode normal">Normal</span>
+</header>
+<main id="view"></main>
+<nav>
+  <button data-tab="today" class="on"><span>☀️</span>Today</button>
+  <button data-tab="trend"><span>📈</span>Trend</button>
+  <button data-tab="game"><span>🏆</span>Game</button>
+  <button data-tab="plan"><span>📝</span>My Plan</button>
+</nav>
+<div id="toast" class="toast"></div>
+
+<script>
+'use strict';
+// ---------- storage ----------
+const KEY = 'steady.v1';
+const DEFAULTS = {
+  settings: {
+    proteinTarget: 150, stepTarget: 8000,
+    phase: 'loss',            // 'loss' or 'maintain'
+    goalLow: null, goalHigh: null,
+    yellow: 3, red: 5,        // tripwire thresholds (lb above reference)
+    crisisPlan: 'Weigh in every morning. Protein at every meal. Walk outside once.',
+    actionPlan: 'Go back to full tracking for 2 weeks. Review what changed. Message my doctor if it keeps rising.',
+    partnerName: '', partnerPhone: ''
+  },
+  mode: 'normal',
+  modeHistory: [],            // [{date, mode}]
+  entries: {},                // 'YYYY-MM-DD' -> entry
+  dismissed: {},              // suggestion key -> date
+  events: []                  // [{date, type, text}]
+};
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return structuredClone(DEFAULTS);
+    const s = JSON.parse(raw);
+    return {...structuredClone(DEFAULTS), ...s, settings:{...DEFAULTS.settings, ...(s.settings||{})}};
+  }catch(e){ return structuredClone(DEFAULTS); }
+}
+let S = load();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save — storage blocked'); } }
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+
+// ---------- dates ----------
+const pad = n => String(n).padStart(2,'0');
+const ds = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (s,n) => { const d = parse(s); d.setDate(d.getDate()+n); return ds(d); };
+const today = () => ds(new Date());
+const diffDays = (a,b) => Math.round((parse(b) - parse(a)) / 864e5);
+const nice = s => parse(s).toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+
+// ---------- calculations ----------
+const MODES = {normal:'Normal', lean:'Lean', crisis:'Crisis'};
+const MULT = {normal:1, lean:1.5, crisis:2};
+const sortedDates = () => Object.keys(S.entries).sort();
+
+function avg7(date, minN=1){
+  let sum=0, n=0;
+  for(let i=0;i<7;i++){ const e = S.entries[addDays(date,-i)]; if(e && e.weight){ sum+=e.weight; n++; } }
+  return n>=minN ? sum/n : null;
+}
+function latestWeightDate(){
+  const ds_ = sortedDates().filter(d => S.entries[d].weight);
+  return ds_.length ? ds_[ds_.length-1] : null;
+}
+function entryPoints(e){
+  let p = 5;                       // showing up
+  if(e.weight) p += 5;
+  if(e.protein) p += 10;
+  if(e.steps) p += 10;
+  if(e.workout) p += 10;
+  return Math.round(p * (MULT[e.mode] || 1));
+}
+function totals(){
+  let pts = 0;
+  for(const d of sortedDates()) pts += entryPoints(S.entries[d]);
+  const level = Math.floor(pts/300) + 1;
+  return {pts, level, into: pts % 300};
+}
+// Streak counts check-ins (any mode). Freeze days cover missed days while you have them.
+function streakInfo(){
+  const dates = sortedDates(); const t = today();
+  let streak=0, freezes=2, best=0;
+  if(!dates.length) return {streak, freezes, best};
+  for(let d = dates[0]; d <= t; d = addDays(d,1)){
+    if(S.entries[d]){ streak++; if(streak % 7 === 0) freezes = Math.min(3, freezes+1); }
+    else if(d === t){ /* today not done yet */ }
+    else if(streak > 0 && freezes > 0){ freezes--; }
+    else streak = 0;
+    best = Math.max(best, streak);
+  }
+  return {streak, freezes, best};
+}
+function daysMissed(){
+  const t = today();
+  if(S.entries[t]) return 0;
+  const dates = sortedDates().filter(d => d < t);
+  if(!dates.length) return 0;
+  return diffDays(dates[dates.length-1], t) - 1;
+}
+function tripwire(){
+  const lw = latestWeightDate(); if(!lw) return null;
+  const cur = avg7(lw, 3); if(cur == null) return null;
+  const st = S.settings; let ref, basis;
+  if(st.phase === 'maintain' && st.goalHigh){ ref = +st.goalHigh; basis = 'top of your goal range'; }
+  else {
+    let lo = Infinity;
+    for(let i=0;i<60;i++){ const a = avg7(addDays(lw,-i), 3); if(a != null && a < lo) lo = a; }
+    ref = lo; basis = 'your recent low (7-day average)';
+  }
+  const over = cur - ref;
+  const level = over >= st.red ? 'red' : over >= st.yellow ? 'yellow' : 'green';
+  return {cur, ref, over, level, basis, yellowAt: ref + +st.yellow, redAt: ref + +st.red};
+}
+function modeSince(){
+  for(let i=S.modeHistory.length-1;i>=0;i--) if(S.modeHistory[i].mode === S.mode) return S.modeHistory[i].date;
+  return null;
+}
+function goodDay(e){
+  if(!e) return false;
+  if(e.mode === 'crisis') return true;
+  if(e.mode === 'lean') return !!(e.protein && e.steps);
+  return !!(e.protein && e.steps);
+}
+function recentDays(n, endInclusive){
+  const out=[]; for(let i=0;i<n;i++) out.push(addDays(endInclusive,-i)); return out;
+}
+function dismissedRecently(key, days=7){
+  const d = S.dismissed[key]; return d && diffDays(d, today()) < days;
+}
+
+// ---------- suggestions ----------
+function suggestions(){
+  const out = []; const t = today(); const st = S.settings;
+  const missed = daysMissed();
+  if(missed >= 2 && S.mode !== 'crisis' && !dismissedRecently('crisis-'+t, 1))
+    out.push({key:'crisis-'+t, cls:'info', html:`Welcome back. You missed ${missed} days — that happens. Want to switch to <b>Crisis mode</b> for a bit? It's just a weigh-in and one tap a day.`,
+      actions:[['Switch to Crisis', ()=>setMode('crisis')]]});
+  if(missed >= 3 && st.partnerPhone && !dismissedRecently('partner-'+t, 1)){
+    const msg = encodeURIComponent(`Hey ${st.partnerName||''} — I've gone quiet on my health check-ins for a few days. Just letting you know, like we agreed.`);
+    out.push({key:'partner-'+t, cls:'info', html:`It's been ${missed} days. You asked to let <b>${esc(st.partnerName||'your partner')}</b> know when this happens.`,
+      actions:[['Send text', ()=>{ location.href = `sms:${st.partnerPhone}?body=${msg}`; }]]});
+  }
+  const tw = tripwire();
+  if(tw && tw.level === 'red' && !dismissedRecently('red-'+Math.round(tw.ref),3))
+    out.push({key:'red-'+Math.round(tw.ref), cls:'red', html:`<b>Red tripwire:</b> your 7-day average (${tw.cur.toFixed(1)}) is ${tw.over.toFixed(1)} lb above ${tw.basis}. Time for your action plan:<br><i>${esc(st.actionPlan)}</i>`, actions:[]});
+  else if(tw && tw.level === 'yellow' && !dismissedRecently('yellow-'+Math.round(tw.ref)))
+    out.push({key:'yellow-'+Math.round(tw.ref), cls:'yellow', html:`<b>Yellow tripwire:</b> your 7-day average is ${tw.over.toFixed(1)} lb above ${tw.basis}. ${S.mode==='normal'?'Lean mode for a week might help — and look back at the last 2 weeks on the Trend tab.':'Look back at the last 2 weeks on the Trend tab.'}`,
+      actions: S.mode==='normal' ? [['Switch to Lean', ()=>setMode('lean')]] : []});
+  // step back up
+  if(S.mode !== 'normal'){
+    const since = modeSince();
+    const end = S.entries[t] ? t : addDays(t,-1);
+    const last5 = recentDays(5, end);
+    if(since && diffDays(since, t) >= 5 && last5.every(d => goodDay(S.entries[d])) && !dismissedRecently('up-'+S.mode)){
+      const next = S.mode === 'crisis' ? 'lean' : 'normal';
+      out.push({key:'up-'+S.mode, cls:'info', html:`5 solid days in ${MODES[S.mode]} mode. Ready to step up to <b>${MODES[next]}</b>? No pressure — staying put is fine too.`,
+        actions:[[`Step up to ${MODES[next]}`, ()=>setMode(next)]]});
+    }
+  }
+  // raise step target
+  if(S.mode === 'normal'){
+    const end = S.entries[t] ? t : addDays(t,-1);
+    const last7 = recentDays(7, end);
+    if(last7.every(d => S.entries[d] && S.entries[d].steps && S.entries[d].mode==='normal') && !dismissedRecently('raise-'+st.stepTarget, 14)){
+      const nt = +st.stepTarget + 500;
+      out.push({key:'raise-'+st.stepTarget, cls:'info', html:`You hit your step goal 7 days running. Raise it from ${(+st.stepTarget).toLocaleString()} to <b>${nt.toLocaleString()}</b>?`,
+        actions:[['Raise it', ()=>{ S.events.push({date:t,type:'raise',text:`Steps ${(+st.stepTarget).toLocaleString()} → ${nt.toLocaleString()}`}); st.stepTarget = nt; save(); toast('Step goal raised 📈'); render(); }]]});
+    }
+  }
+  return out;
+}
+
+// ---------- actions ----------
+function setMode(m){
+  if(S.mode === m) return;
+  S.mode = m; S.modeHistory.push({date: today(), mode: m});
+  const e = S.entries[today()]; if(e) e.mode = m;
+  if(draft && draft._date === today()) draft.mode = m;
+  save();
+  toast(m === 'normal' ? 'Back to Normal 🟢' : m === 'lean' ? 'Lean mode — keep it simple 🟡' : 'Crisis mode — just show up 🔴');
+  render();
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+// ---------- views ----------
+let tab = 'today';
+let editDate = today();
+let draft = null;
+let trendRange = 30;
+const view = document.getElementById('view');
+
+function render(){
+  const pill = document.getElementById('modePill');
+  pill.className = 'mode ' + S.mode; pill.textContent = MODES[S.mode];
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  ({today:renderToday, trend:renderTrend, game:renderGame, plan:renderPlan})[tab]();
+  window.scrollTo(0,0);
+}
+
+function renderToday(){
+  const existing = S.entries[editDate];
+  if(!draft || draft._date !== editDate){
+    draft = existing ? {...existing} : {mode: S.mode, weight:null, sleep:null, stress:null, protein:false, steps:false, workout:false, focus:'', note:''};
+    draft._date = editDate;
+  }
+  const m = draft.mode; const st = S.settings; const t = today();
+  const sk = streakInfo();
+  let html = '';
+  if(editDate === t) for(const s of suggestions())
+    html += `<div class="banner ${s.cls}">${s.html}<div class="row">${s.actions.map((a,i)=>`<button data-sa="${s.key}|${i}">${a[0]}</button>`).join('')}<button class="link" data-dismiss="${s.key}">Not now</button></div></div>`;
+
+  html += `<div class="datenav"><button id="prevDay">←</button><b>${editDate===t?'Today':nice(editDate)}</b><button id="nextDay" ${editDate>=t?'disabled':''}>→</button></div>`;
+  html += `<div class="card">
+    <div class="row between"><h2 style="margin:0">Check-in</h2><span class="mode ${m}">${MODES[m]}</span></div>
+    <label class="f">Weight (lb)</label>
+    <input id="weight" class="big" type="number" inputmode="decimal" step="0.1" placeholder="—" value="${draft.weight ?? ''}">`;
+  if(m === 'normal'){
+    html += `<label class="f">Sleep</label>
+      <div class="seg" data-field="sleep">${['😴 Poor','😐 OK','🙂 Good'].map((l,i)=>`<button class="${draft.sleep===i?'on':''}" data-v="${i}">${l}</button>`).join('')}</div>
+      <label class="f">Stress</label>
+      <div class="seg" data-field="stress">${[1,2,3,4,5].map(v=>`<button class="${draft.stress===v?'on':''}" data-v="${v}">${v}</button>`).join('')}</div>`;
+  }
+  if(m === 'crisis'){
+    html += `<p class="small muted" style="margin:12px 0 4px">Your minimum: <i>${esc(st.crisisPlan)}</i></p>`;
+    html += toggleHtml('protein', 'Protein at meals') + toggleHtml('steps', 'Walked outside');
+  } else {
+    html += `<label class="f">Behaviors</label>`;
+    html += toggleHtml('protein', `Protein target (${st.proteinTarget} g)`);
+    html += toggleHtml('steps', `Steps (${(+st.stepTarget).toLocaleString()})`);
+    if(m === 'normal') html += toggleHtml('workout', 'Workout');
+  }
+  if(m === 'normal')
+    html += `<label class="f">Today's one focus</label><input id="focus" type="text" placeholder="e.g. protein at lunch" value="${esc(draft.focus)}">`;
+  if(m !== 'crisis')
+    html += `<label class="f">${m==='normal'?'Notes / tomorrow\'s tricky moment & plan':'Note (optional)'}</label><textarea id="note" placeholder="If ___ happens, I will ___">${esc(draft.note)}</textarea>`;
+  html += `<div style="margin-top:14px"><button class="primary" id="saveBtn">${m==='crisis' ? 'Got through today 👍' : existing ? 'Update check-in' : 'Save check-in'}</button></div>
+    ${existing ? `<p class="small muted" style="text-align:center;margin:8px 0 0">Checked in ✓ · ${entryPoints(existing)} pts${existing.mode!=='normal'?` (${MULT[existing.mode]}× ${MODES[existing.mode]} bonus)`:''}</p>` : ''}
+  </div>`;
+
+  html += `<div class="card"><div class="row between">
+      <div><div class="stat">🔥 ${sk.streak}</div><div class="small muted">day streak</div></div>
+      <div><div class="stat">❄️ ${sk.freezes}</div><div class="small muted">freeze days</div></div>
+      <div><div class="stat">⭐ ${totals().level}</div><div class="small muted">level</div></div>
+    </div></div>`;
+
+  html += `<div class="card"><h2>Rough day? Change mode</h2>
+    <div class="seg" id="modeSeg">${Object.keys(MODES).map(k=>`<button class="${S.mode===k?'on':''}" data-mode="${k}">${k==='normal'?'🟢':k==='lean'?'🟡':'🔴'} ${MODES[k]}</button>`).join('')}</div>
+    <p class="small muted" style="margin:8px 0 0">${modeBlurb(S.mode)}</p></div>`;
+  view.innerHTML = html;
+
+  // wiring
+  const w = document.getElementById('weight');
+  w.oninput = () => { draft.weight = w.value === '' ? null : parseFloat(w.value); };
+  view.querySelectorAll('.seg[data-field]').forEach(seg => seg.onclick = ev => {
+    const b = ev.target.closest('button'); if(!b) return;
+    const f = seg.dataset.field, v = +b.dataset.v;
+    draft[f] = draft[f] === v ? null : v; renderToday();
+  });
+  view.querySelectorAll('.toggle').forEach(el => el.onclick = () => { draft[el.dataset.f] = !draft[el.dataset.f]; renderToday(); });
+  const fo = document.getElementById('focus'); if(fo) fo.oninput = () => draft.focus = fo.value;
+  const no = document.getElementById('note'); if(no) no.oninput = () => draft.note = no.value;
+  document.getElementById('saveBtn').onclick = saveEntry;
+  document.getElementById('prevDay').onclick = () => { editDate = addDays(editDate,-1); renderToday(); };
+  document.getElementById('nextDay').onclick = () => { if(editDate < t){ editDate = addDays(editDate,1); renderToday(); } };
+  view.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  const sugg = editDate === t ? suggestions() : [];
+  view.querySelectorAll('[data-sa]').forEach(b => b.onclick = () => {
+    const [key, i] = b.dataset.sa.split('|'); const s = sugg.find(x => x.key === key);
+    if(s){ S.dismissed[key] = t; save(); s.actions[+i][1](); }
+  });
+  view.querySelectorAll('[data-dismiss]').forEach(b => b.onclick = () => { S.dismissed[b.dataset.dismiss] = t; save(); renderToday(); });
+}
+function toggleHtml(f, label){
+  return `<div class="toggle ${draft[f]?'on':''}" data-f="${f}"><span>${label}</span><span class="box">${draft[f]?'✓':''}</span></div>`;
+}
+function modeBlurb(m){
+  return m === 'normal' ? 'Full check-in: weight, sleep, stress, behaviors, one focus.'
+    : m === 'lean' ? 'Short check-in: weight, protein, steps. Points ×1.5.'
+    : 'Tiny check-in: weigh in and tap one button. Still counts for your streak. Points ×2.';
+}
+function saveEntry(){
+  const wasNew = !S.entries[editDate];
+  const before = streakInfo().streak;
+  const e = {...draft}; delete e._date; e.t = Date.now();
+  if(e.weight != null && (isNaN(e.weight) || e.weight < 50 || e.weight > 900)){ toast('That weight looks off — check it?'); return; }
+  S.entries[editDate] = e; save();
+  const after = streakInfo().streak;
+  let msg = `Saved · +${entryPoints(e)} pts`;
+  if(wasNew && [7,14,30,60,100,180,365].includes(after) && after > before) msg = `🔥 ${after}-day streak! +${entryPoints(e)} pts`;
+  else if(e.mode === 'crisis') msg = `Showed up on a hard day 🛡️ +${entryPoints(e)} pts`;
+  toast(msg); draft = null; renderToday();
+}
+
+function renderTrend(){
+  const t = today(); const st = S.settings;
+  const dates = sortedDates().filter(d => S.entries[d].weight);
+  let html = `<div class="card"><div class="row between"><h2 style="margin:0">Weight</h2>
+    <div class="seg" id="rangeSeg" style="width:180px">${[[30,'30d'],[90,'90d'],[0,'All']].map(([v,l])=>`<button class="${trendRange===v?'on':''}" data-r="${v}">${l}</button>`).join('')}</div></div>`;
+  if(dates.length < 2){
+    html += `<p class="muted">Log a few weigh-ins and your trend will show up here. The 7-day average line matters more than any single day.</p></div>`;
+    view.innerHTML = html; wireRange(); return;
+  }
+  const start = trendRange ? addDays(t, -trendRange+1) : dates[0];
+  const days = []; for(let d = start; d <= t; d = addDays(d,1)) days.push(d);
+  const lastW = dates[dates.length-1];
+  const pts = days.map((d,i) => ({i, w: S.entries[d]?.weight ?? null, a: d <= lastW ? avg7(d, 1) : null}));
+  const tw = tripwire();
+  const vals = pts.flatMap(p => [p.w, p.a]).filter(v => v != null);
+  if(st.goalLow && st.goalHigh && st.phase==='maintain'){ vals.push(+st.goalLow, +st.goalHigh); }
+  if(tw && tw.level !== 'green') vals.push(tw.yellowAt);
+  if(!vals.length){ html += `<p class="muted">No weigh-ins in this range.</p></div>`; view.innerHTML = html; wireRange(); return; }
+  let lo = Math.floor(Math.min(...vals) - 1), hi = Math.ceil(Math.max(...vals) + 1);
+  const W = 340, H = 200, L = 34, R = 8, T = 10, B = 22;
+  const x = i => L + (days.length === 1 ? 0 : i * (W-L-R) / (days.length-1));
+  const y = v => T + (hi - v) * (H-T-B) / (hi - lo);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Weight trend">`;
+  for(let k=0;k<=4;k++){ const v = lo + (hi-lo)*k/4; svg += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-4}" y="${y(v)+3}" text-anchor="end">${v.toFixed(0)}</text>`; }
+  if(st.phase==='maintain' && st.goalLow && st.goalHigh)
+    svg += `<rect x="${L}" width="${W-L-R}" y="${y(+st.goalHigh)}" height="${y(+st.goalLow)-y(+st.goalHigh)}" fill="var(--green)" opacity=".15"/>`;
+  if(tw) svg += `<line x1="${L}" x2="${W-R}" y1="${y(tw.yellowAt)}" y2="${y(tw.yellowAt)}" stroke="var(--yellow)" stroke-dasharray="4 3"/>`;
+  for(const p of pts) if(p.w != null) svg += `<circle cx="${x(p.i)}" cy="${y(p.w)}" r="2.5" fill="var(--muted)" opacity=".6"/>`;
+  const line = pts.filter(p => p.a != null).map(p => `${x(p.i).toFixed(1)},${y(p.a).toFixed(1)}`).join(' ');
+  svg += `<polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>`;
+  svg += `<text x="${L}" y="${H-6}">${nice(days[0])}</text><text x="${W-R}" y="${H-6}" text-anchor="end">${nice(days[days.length-1])}</text></svg>`;
+  html += svg + `<p class="small muted" style="margin:6px 0 0">Dots = daily weigh-ins · line = 7-day average${tw?' · dashed = yellow tripwire':''}${st.phase==='maintain'&&st.goalLow?' · band = goal range':''}</p></div>`;
+
+  const lw = dates[dates.length-1];
+  const cur = avg7(lw), wkAgo = avg7(addDays(lw,-7)), first = avg7(addDays(dates[0],6));
+  html += `<div class="grid2">
+    <div class="card"><div class="small muted">7-day average</div><div class="stat">${cur.toFixed(1)}</div></div>
+    <div class="card"><div class="small muted">vs last week</div><div class="stat">${wkAgo!=null?fmtDelta(cur-wkAgo):'—'}</div></div>
+    <div class="card"><div class="small muted">Since start</div><div class="stat">${first!=null?fmtDelta(cur-first):'—'}</div></div>
+    <div class="card"><div class="small muted">Tripwire</div><div class="stat" style="color:var(--${tw?tw.level:'muted'})">${tw?{green:'🟢 OK',yellow:'🟡 Watch',red:'🔴 Act'}[tw.level]:'—'}</div>${tw?`<div class="small muted">yellow at ${tw.yellowAt.toFixed(1)}</div>`:''}</div>
+  </div>`;
+
+  // last 14 days log
+  html += `<div class="card"><h2>Last 14 days</h2>`;
+  for(const d of recentDays(14, t)){
+    const e = S.entries[d];
+    html += `<div class="row between small" style="padding:6px 0;border-bottom:1px solid var(--line)"><span>${nice(d)}</span>
+      <span>${e ? `${e.weight ?? '—'} · ${e.protein?'🍗':'·'}${e.steps?'👟':'·'}${e.workout?'🏋️':'·'} <span class="mode ${e.mode}">${MODES[e.mode][0]}</span>` : `<span class="muted">${d===t?'not yet':'missed'}</span>`}</span></div>`;
+  }
+  html += `</div>`;
+  view.innerHTML = html; wireRange();
+}
+function fmtDelta(v){ return (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1); }
+function wireRange(){ view.querySelectorAll('#rangeSeg button').forEach(b => b.onclick = () => { trendRange = +b.dataset.r; renderTrend(); }); }
+
+function renderGame(){
+  const tt = totals(), sk = streakInfo(), t = today();
+  const dates = sortedDates();
+  const week = recentDays(7, t).filter(d => S.entries[d]).length;
+  const rough = dates.filter(d => S.entries[d].mode !== 'normal').length;
+  const wdates = dates.filter(d => S.entries[d].weight);
+  let lost = 0;
+  if(wdates.length >= 2){ const f = avg7(addDays(wdates[0],6)); const c = avg7(wdates[wdates.length-1]); if(f!=null && c!=null) lost = f - c; }
+  const st = S.settings;
+  const inRange = (st.goalLow && st.goalHigh) ? dates.filter(d => { const a = avg7(d,3); return a!=null && a >= st.goalLow && a <= st.goalHigh; }).length : 0;
+
+  let html = `<div class="card"><div class="row between"><div><div class="stat">Level ${tt.level}</div><div class="small muted">${tt.pts.toLocaleString()} points</div></div><div class="small muted">${300-tt.into} to next</div></div>
+    <div class="bar" style="margin-top:10px"><div style="width:${tt.into/3}%"></div></div></div>
+  <div class="card"><h2>This week</h2><div class="row between"><span>${week}/7 check-ins</span><span>🔥 ${sk.streak} · best ${sk.best}</span></div>
+    <div class="bar" style="margin-top:8px"><div style="width:${week/7*100}%"></div></div>
+    <p class="small muted" style="margin:8px 0 0">Streak counts any check-in, any mode. You have ❄️ ${sk.freezes} freeze day${sk.freezes===1?'':'s'} (earn one every 7 days, max 3).</p></div>`;
+
+  const badges = [];
+  badges.push({e:'🛡️', t:'Showed up on a rough day', d: rough ? `${rough} time${rough===1?'':'s'} — these earn bonus points` : 'Check in during Lean or Crisis mode', on: rough>0});
+  for(const n of [7,30,100,365]) badges.push({e:'🔥', t:`${n}-day streak`, d: sk.best>=n ? 'Earned' : `${Math.max(0,n-sk.best)} to go`, on: sk.best>=n});
+  for(const n of [5,10,20,30,40,50,60,75,100]){ if(n > 10 && lost < n-10) break; badges.push({e:'⚖️', t:`${n} lb down (7-day avg)`, d: lost>=n?'Earned':`${(n-lost).toFixed(1)} to go`, on: lost>=n}); }
+  if(st.phase === 'maintain') badges.push({e:'🎯', t:'Days in goal range', d: `${inRange} days`, on: inRange>0});
+  for(const ev of S.events.filter(e=>e.type==='raise')) badges.push({e:'📈', t:'Goal raised', d:`${ev.text} · ${nice(ev.date)}`, on:true});
+  html += `<div class="card"><h2>Badges</h2>${badges.map(b=>`<div class="badge ${b.on?'':'locked'}"><span class="e">${b.e}</span><div><div>${b.t}</div><div class="small muted">${b.d}</div></div></div>`).join('')}</div>`;
+  html += `<div class="card small muted">Points: +5 check-in, +5 weigh-in, +10 each for protein, steps, workout. Lean ×1.5, Crisis ×2. The scale itself is never scored.</div>`;
+  view.innerHTML = html;
+}
+
+function renderPlan(){
+  const st = S.settings;
+  const f = (id, label, type='number', extra='') => `<label class="f" for="${id}">${label}</label><input id="${id}" type="${type}" ${type==='number'?'inputmode="decimal"':''} value="${esc(st[id] ?? '')}" ${extra}>`;
+  view.innerHTML = `
+  <div class="card"><h2>Targets</h2>
+    <div class="grid2"><div>${f('proteinTarget','Protein (g/day)')}</div><div>${f('stepTarget','Steps/day')}</div></div></div>
+  <div class="card"><h2>Phase & tripwires</h2>
+    <label class="f">Phase</label>
+    <select id="phase"><option value="loss" ${st.phase==='loss'?'selected':''}>Losing — tripwire vs my recent low</option><option value="maintain" ${st.phase==='maintain'?'selected':''}>Maintaining — tripwire vs my goal range</option></select>
+    <div class="grid2"><div>${f('goalLow','Goal range low (lb)')}</div><div>${f('goalHigh','Goal range high (lb)')}</div></div>
+    <div class="grid2"><div>${f('yellow','🟡 Yellow at +lb')}</div><div>${f('red','🔴 Red at +lb')}</div></div>
+    <label class="f" for="actionPlan">🔴 When I hit red, I will…</label><textarea id="actionPlan">${esc(st.actionPlan)}</textarea></div>
+  <div class="card"><h2>Crisis plan</h2>
+    <p class="small muted" style="margin:0">Write this while things are calm. It's what you'll see on hard days.</p>
+    <label class="f" for="crisisPlan">My minimum is…</label><textarea id="crisisPlan">${esc(st.crisisPlan)}</textarea></div>
+  <div class="card"><h2>Accountability partner</h2>
+    <p class="small muted" style="margin:0">Optional. After 3 missed days, the app offers to text them (you still hit send).</p>
+    ${f('partnerName','Name','text')}${f('partnerPhone','Phone','tel')}</div>
+  <button class="primary" id="savePlan">Save plan</button>
+  <div class="card" style="margin-top:12px"><h2>Your data</h2>
+    <p class="small muted" style="margin:0 0 8px">Everything is stored only on this phone. Export a backup now and then.</p>
+    <div class="row"><button id="exportBtn">⬇️ Export backup</button><button id="importBtn">⬆️ Import</button><input id="importFile" type="file" accept="application/json" hidden></div>
+    <p class="small muted">${Object.keys(S.entries).length} check-ins stored.</p>
+    <button class="link" id="resetBtn" style="color:var(--red)">Erase all data</button></div>`;
+  document.getElementById('savePlan').onclick = () => {
+    const num = id => { const v = document.getElementById(id).value; return v === '' ? null : parseFloat(v); };
+    for(const id of ['proteinTarget','stepTarget','goalLow','goalHigh','yellow','red']) st[id] = num(id);
+    st.proteinTarget ??= 150; st.stepTarget ??= 8000; st.yellow ??= 3; st.red ??= 5;
+    if(st.goalLow && st.goalHigh && st.goalLow > st.goalHigh) [st.goalLow, st.goalHigh] = [st.goalHigh, st.goalLow];
+    st.phase = document.getElementById('phase').value;
+    for(const id of ['actionPlan','crisisPlan','partnerName','partnerPhone']) st[id] = document.getElementById(id).value.trim();
+    save(); toast('Plan saved'); render();
+  };
+  document.getElementById('exportBtn').onclick = () => {
+    const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `steady-backup-${today()}.json`; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  };
+  const fi = document.getElementById('importFile');
+  document.getElementById('importBtn').onclick = () => fi.click();
+  fi.onchange = async () => {
+    try{
+      const d = JSON.parse(await fi.files[0].text());
+      if(!d.entries || !d.settings) throw new Error('bad file');
+      if(!confirm('Replace current data with this backup?')) return;
+      S = {...structuredClone(DEFAULTS), ...d, settings:{...DEFAULTS.settings, ...d.settings}}; save(); toast('Backup restored'); render();
+    }catch(e){ toast("That file doesn't look like a Steady backup"); }
+  };
+  document.getElementById('resetBtn').onclick = () => {
+    if(confirm('Erase ALL check-ins and settings? Export a backup first if unsure.')){ S = structuredClone(DEFAULTS); save(); render(); }
+  };
+}
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => { tab = b.dataset.tab; if(tab==='today') editDate = today(); draft = null; render(); });
+// If the app stays open past midnight, jump to the new day when reopened.
+document.addEventListener('visibilitychange', () => { if(!document.hidden && tab==='today' && !draft?.weight && editDate < today()){ editDate = today(); draft = null; render(); } });
+render();
+if('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
